@@ -276,6 +276,10 @@ def load_and_prepare_dataset(data_file, tokenizer, model_name,
                         for j in range(i, min(i + len(assistant_tokens), len(input_ids))):
                             if attention_mask[j] == 1:  # Only unmask non-padding tokens
                                 labels[j] = input_ids[j]
+                        # Also unmask the EOS token right after the assistant response
+                        eos_pos = i + len(assistant_tokens)
+                        if eos_pos < len(input_ids) and attention_mask[eos_pos] == 1:
+                            labels[eos_pos] = input_ids[eos_pos]
                         break
                 
                 if debug == 4:
