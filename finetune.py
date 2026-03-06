@@ -923,8 +923,7 @@ def main():
         os.makedirs(output_dir, exist_ok=True)
     training_args = TrainingArguments(
         output_dir=output_dir,
-        overwrite_output_dir=True,
-        
+
         # Training parameters
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
@@ -986,7 +985,7 @@ def main():
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            tokenizer=tokenizer,
+            processing_class=tokenizer,
             data_collator=data_collator,
             callbacks=[flop_callback] if args.track_flop else [],
         )
@@ -998,7 +997,7 @@ def main():
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            tokenizer=tokenizer,
+            processing_class=tokenizer,
             data_collator=data_collator,
             callbacks=[flop_callback] if args.track_flop else [],
             lbd=args.lbd,
