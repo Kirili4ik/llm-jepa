@@ -20,7 +20,8 @@ from transformers import (
     TrainingArguments,
     TrainerCallback,
     Trainer,
-    DataCollatorForLanguageModeling
+    DataCollatorForLanguageModeling, 
+    default_data_collator
 )
 from peft import LoraConfig, get_peft_model, TaskType
 import argparse
@@ -792,6 +793,8 @@ def main():
     parser.add_argument("--infonce", action="store_true", help="When set, Use InfoNCE loss.")
     parser.add_argument("--same_flop", action="store_true", help="When set, Use same number of flops per epoch.")
     parser.add_argument("--jepa_ratio", type=float, default=-1.0, help="When >0, randomly select this ratio of batches to apply JEPA. This implments Random JEPA-Loss Dropout (LD). If LD = alpha, jepa_ratio = 1 - alpha")
+    parser.add_argument("--wandb", action="store_true", help="Log training metrics to wandb")
+    parser.add_argument("--wandb_run_name", type=str, default=None, help="wandb run name")
 
     args = parser.parse_args()
     
@@ -895,12 +898,10 @@ def main():
         else:
             print("No evaluation dataset")
     
-    # Data collator - don't use padding since we already padded
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False,  # We're doing causal LM, not masked LM
-        pad_to_multiple_of=None,  # We already padded to max_length
-    )
+    # Use default_data_collator to preserve the pre-computed masked labels.
+    # DataCollatorForLanguageModeling(mlm=False) would overwrite labels with
+    # input_ids.clone(), erasing the -100 masking on non-assistant tokens.
+    data_collator = default_data_collator
     
     # Training arguments - optimized for multi-GPU stability
     eval_steps = args.eval_steps if not args.pretrain else args.eval_steps * 20
@@ -962,7 +963,8 @@ def main():
         fsdp_config={},
         
         # Other
-        report_to="none",
+        report_to="wandb" if args.wandb else "none",
+        run_name=args.wandb_run_name if args.wandb else None,
         remove_unused_columns=False,
         load_best_model_at_end=True if eval_dataset else False,
         
